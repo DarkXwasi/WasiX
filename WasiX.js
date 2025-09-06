@@ -1,10 +1,8 @@
 //================== Dependencies ==================//
 const moment = require("moment-timezone");
-const { readdirSync, readFileSync, writeFileSync, existsSync, unlinkSync, rm } = require("fs-extra");
+const { readdirSync, readFileSync, writeFileSync, existsSync } = require("fs-extra");
 const { join, resolve } = require("path");
-const { execSync } = require('child_process');
 const logger = require("./utils/log.js");
-const login = require("WasiX-fca"); 
 const axios = require("axios");
 const listPackage = JSON.parse(readFileSync('./package.json')).dependencies;
 const listbuiltinModules = require("module").builtinModules;
@@ -110,53 +108,47 @@ try {
     return logger.loader(global.getText("WasiX", "notFoundPathAppstate"), "error");
 }
 
-//================== Login & Start Bot ==================//
-function onBot({ models: botModel }) {
-    const loginData = { appState };
-    login(loginData, async (loginError, loginApiData) => {
-        if (loginError) return logger(JSON.stringify(loginError), "ERROR");
-        loginApiData.setOptions(global.config.FCAOption);
-        writeFileSync(appStateFile, JSON.stringify(loginApiData.getAppState(), null, '\x09'));
-        global.client.api = loginApiData;
-        global.config.version = '1.2.14';
-        global.client.timeStart = new Date().getTime();
+//================== Initialize Bot ==================//
+function startBot() {
+    // Assign appState directly to client.api for now
+    global.client.api = appState;
+    global.client.timeStart = new Date().getTime();
 
-        //================== Load Commands ==================//
-        const listCommand = readdirSync(global.client.mainPath + '/WasiX/commands')
-            .filter(command => command.endsWith('.js') && !global.config.commandDisabled.includes(command));
+    //================== Load Commands ==================//
+    const listCommand = readdirSync(global.client.mainPath + '/WasiX/commands')
+        .filter(command => command.endsWith('.js') && !global.config.commandDisabled.includes(command));
 
-        for (const command of listCommand) {
-            try {
-                const module = require(global.client.mainPath + '/WasiX/commands/' + command);
-                if (!module.config || !module.run || !module.config.commandCategory) 
-                    throw new Error(global.getText('WasiX', 'errorFormat'));
-                if (global.client.commands.has(module.config.name || '')) 
-                    throw new Error(global.getText('WasiX', 'nameExist'));
-                global.client.commands.set(module.config.name, module);
-                logger.loader(global.getText('WasiX', 'successLoadModule', module.config.name));
-            } catch (error) {
-                logger.loader(global.getText('WasiX', 'failLoadModule', command, error), 'error');
-            }
+    for (const command of listCommand) {
+        try {
+            const module = require(global.client.mainPath + '/WasiX/commands/' + command);
+            if (!module.config || !module.run || !module.config.commandCategory) 
+                throw new Error(global.getText('WasiX', 'errorFormat'));
+            if (global.client.commands.has(module.config.name || '')) 
+                throw new Error(global.getText('WasiX', 'nameExist'));
+            global.client.commands.set(module.config.name, module);
+            logger.loader(global.getText('WasiX', 'successLoadModule', module.config.name));
+        } catch (error) {
+            logger.loader(global.getText('WasiX', 'failLoadModule', command, error), 'error');
         }
+    }
 
-        //================== Load Events ==================//
-        const events = readdirSync(global.client.mainPath + '/WasiX/events')
-            .filter(ev => ev.endsWith('.js') && !global.config.eventDisabled.includes(ev));
+    //================== Load Events ==================//
+    const events = readdirSync(global.client.mainPath + '/WasiX/events')
+        .filter(ev => ev.endsWith('.js') && !global.config.eventDisabled.includes(ev));
 
-        for (const ev of events) {
-            try {
-                const event = require(global.client.mainPath + '/WasiX/events/' + ev);
-                if (typeof event === "function") event();
-                if (event.handleEvent && typeof event.handleEvent === "function") {
-                    global.client.eventRegistered.push(ev);
-                }
-                logger.loader(global.getText('WasiX', 'successLoadModule', ev));
-            } catch (error) {
-                logger.loader(global.getText('WasiX', 'failLoadModule', ev, error), 'error');
+    for (const ev of events) {
+        try {
+            const event = require(global.client.mainPath + '/WasiX/events/' + ev);
+            if (typeof event === "function") event();
+            if (event.handleEvent && typeof event.handleEvent === "function") {
+                global.client.eventRegistered.push(ev);
             }
+            logger.loader(global.getText('WasiX', 'successLoadModule', ev));
+        } catch (error) {
+            logger.loader(global.getText('WasiX', 'failLoadModule', ev, error), 'error');
         }
-    });
+    }
 }
 
 //================== Export Bot ==================//
-module.exports = { onBot };
+module.exports = { startBot };
