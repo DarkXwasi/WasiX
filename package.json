@@ -1,5 +1,5 @@
 {
-		"name": "priyansh-bot-v2",
+		"name": "WasiX",
 		"version": "10.1.1",
 		"description": "A simple Facebook Messenger Bot made by WASEEM ABBASI.",
 		"main": "WasiX.js",
@@ -27,7 +27,7 @@
 				"mental"
 		],
 		"author": "WASEEM ABBASI",
-		"license": "GPL-3.0",
+		"license": "apache",
 		"bugs": {
 				"url": "https://github.com/Priyansh-11/Priyansh-bot/issues"
 		},
